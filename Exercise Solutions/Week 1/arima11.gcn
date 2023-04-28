@@ -1,0 +1,19 @@
+block ARIMA
+{
+	identities
+	{
+		x[] = theta * x[-1] - phi * eps[-1] + epsilon[];
+		eps[] = epsilon[];
+	};
+
+	shocks
+	{
+		epsilon[];
+	};
+
+	calibration
+	{
+		theta = 0.4;
+		phi = 0.4;
+	};
+};

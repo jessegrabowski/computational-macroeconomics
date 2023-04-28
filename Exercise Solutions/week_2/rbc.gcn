@@ -1,0 +1,87 @@
+assumptions
+{
+	positive
+	{
+		K[], A[], mc[], r[], w[], Y[], alpha;
+	};
+};
+
+block HOUSEHOLD
+{
+	definitions
+	{
+		u[] = gamma * log(C[]) + psi * log(L[]);
+	};
+
+	objective
+	{
+		U[] = u[] + beta * E[][U[1]];
+	};
+
+	controls
+	{
+		C[], I[], K[], L[], N[];
+	};
+
+	constraints
+	{
+		C[] + I[] = w[] * N[] + r[] * K[-1] + Div[] : lambda[];
+		N[] + L[] = 1;
+		K[] = (1 - delta) * K[-1] + I[];
+	};
+
+	calibration
+	{
+		beta = 0.98;
+		delta = 0.035;
+		gamma = 1;
+		N[ss] = 0.33 -> psi;
+	};
+};
+
+block FIRM
+{
+	objective
+	{
+		TC[] = -(w[] * N[] + r[] * K[-1]);
+	};
+
+	controls
+	{
+		N[], K[-1];
+	};
+
+	constraints
+	{
+		Y[] = A[] * K[-1] ^ alpha * N[] ^ (1 - alpha): mc[];
+	};
+
+	identities
+	{
+		mc[] = 1;
+		Div[] = Y[] + TC[];
+	};
+	
+	calibration
+	{
+		alpha = 0.33;
+	};
+};
+
+block EXOGENOUS
+{
+	identities
+	{
+		log(A[]) = rho * log(A[-1]) + epsilon[];
+	};
+
+	shocks
+	{
+		epsilon[];
+	};
+
+	calibration
+	{
+		rho = 0.95;
+	};
+};

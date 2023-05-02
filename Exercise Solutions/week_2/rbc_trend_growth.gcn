@@ -1,0 +1,109 @@
+block STEADY_STATE
+{
+	identities
+	{		
+		tau[ss] = tau_bar;
+		G_B[ss] = G_B_bar;
+		# I_G[ss] = I_G_bar;
+		# K_G[ss] = I_G[ss] / (gamma_X - 1 + delta);
+
+		r_G[ss] = gamma_X / beta;
+		r[ss] = (gamma_X / beta - (1 - delta)) / (1 - tau[ss]);
+		# w[ss] = (1 - theta_K) * (A_bar * K_G[ss] ^ theta_G) ^ (1 / (1 - theta_K)) *
+			# (theta_K / r[ss]) ^ (theta_K / (1 - theta_K));
+			
+		w[ss] = (1 - theta_K) * A_bar ^ (1 / (1 - theta_K)) *
+			(theta_K / r[ss]) ^ (theta_K / (1 - theta_K));
+
+		Y[ss] = ((1 - tau[ss]) * w[ss] / theta_L + G_B[ss]) /
+				(1 + (1 - theta_K) / theta_L * (1 - tau[ss]) - 
+				(gamma_X - 1 + delta) * theta_K / r[ss]);
+		K[ss] = theta_K * Y[ss] / r[ss];
+		N[ss] = (1 - theta_K) * Y[ss] / w[ss];
+		
+		I[ss] = (gamma_X - 1 + delta) * K[ss];
+		C[ss] = (1 - tau[ss]) / theta_L * (w[ss] - (1 - theta_K) * Y[ss]);
+				
+		TR[ss] = tau[ss] * (w[ss] * N[ss] + r[ss] * K[ss]) - G_B[ss]; # - I_G[ss];
+	};
+};
+
+
+block FIRST_ORDER_CONDITIONS
+{
+	identities
+	{		
+		# Law of motion of capital
+		gamma_X * K[] = (1 - delta) * K[-1] + I[];
+		
+		# Law of motion of public capital
+		# gamma_X * K_G[] = (1 - delta) * K_G[-1] + I_G[];
+		
+		# Real interest rate
+		gamma_X * E[][C[1] / C[]] = beta * r_G[];
+		
+		# Labor supply curve
+		(1 - tau[]) * w[] = theta_L * C[] / (1 - N[]);
+		
+		# Euler equation
+		gamma_X * E[][C[1] / C[]] = beta * E[][(1 - delta) + (1 - tau[1]) * r[1]];
+		
+		# Production function
+		Y[] = A_bar * K[-1] ^ theta_K * N[] ^ (1 - theta_K); # * K_G[-1] ^ theta_G;
+		
+		# Labor demand
+		w[] * N[] = (1 - theta_K) * Y[];
+		
+		# Capital demand
+		r[] * K[-1] = theta_K * Y[];
+		
+		# Government budget constraint
+		TR[] = tau[] * (w[] * N[] + r[] * K[-1]) - G_B[]; # - I_G[];
+		
+		# Government spending rule
+		G_B[] - G_B_bar = rho_GB * (G_B[-1] - G_B_bar) + epsilon_GB[];
+		
+		# Government investment rule
+		# I_G[] - I_G_bar = rho_IG * (I_G[-1] - I_G_bar) + epsilon_IG[];
+		
+		# Tax rule
+		log(tau[] / tau_bar) = rho_tau * log(tau[-1] / tau_bar) + epsilon_tau[];
+		
+		# Market clearing
+		Y[] = C[] + I[] + G_B[]; # + I_G[];
+	};
+	
+	shocks
+	{
+		epsilon_GB[], epsilon_tau[];
+	};
+	
+	calibration
+	{
+		# Household parameters
+		delta = 0.025;
+		# beta = 0.99;
+		# theta_L = 1.7;
+		r_G[ss] = 1.065 -> beta;
+		N[ss] = 1/3 -> theta_L;
+		
+		# Firm parameters
+		Y[ss] = 1 -> A_bar;
+		w[ss] = 2 -> theta_K;		
+		# A_bar = 1.3;
+		# theta_K = 0.66;
+		#theta_G = 0.1;
+		gamma_X = 1.06;
+		
+		# Government parameters
+		rho_GB = 0.75;
+		rho_tau = 0.75;
+		#rho_IG = 0.75;
+		
+		# G_B[ss] / Y[ss] = 0.2 -> G_B_bar;
+		# I_G[ss] / Y[ss] = 0.02 -> I_G_bar; 
+		G_B_bar = 0.2;
+		#I_G_bar = 0.02;
+		tau_bar = 0.22; 
+	};
+};

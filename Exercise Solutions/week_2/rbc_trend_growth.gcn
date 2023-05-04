@@ -1,7 +1,9 @@
 block STEADY_STATE
 {
 	identities
-	{		
+	{
+		shock_tau[ss] = 0;
+		
 		tau[ss] = tau_bar;
 		G_B[ss] = G_B_bar;
 		# I_G[ss] = I_G_bar;

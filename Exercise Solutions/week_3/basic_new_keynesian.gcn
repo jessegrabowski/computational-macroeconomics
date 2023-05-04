@@ -1,3 +1,40 @@
+block STEADY_STATE
+{
+	identities
+	{
+		nu[ss] = 0;
+		zeta[ss] = 1;
+		A[ss] = 1;
+		
+		pi[ss] = pi_star;
+		P_tilde[ss] = ((1 - theta * pi[ss] ^ (epsilon - 1)) / (1 - theta)) ^ (1 / (1 - epsilon));
+		P_star[ss] = (1 - theta) * P_tilde[ss] ^ (-epsilon) / (1 - theta * pi[ss] ^ epsilon);
+		mc[ss] = (epsilon - 1) / epsilon * (1 - beta * theta * pi[ss] ^ epsilon) / 
+			(1 - beta * theta * pi[ss] ^ (epsilon - 1)) * P_tilde[ss];
+	
+		r_G[ss] = pi[ss] / beta;
+		r[ss] = 1 / beta - (1 - delta);
+		w[ss] = (1 - alpha) * mc[ss] ^ (1 / (1 - alpha)) * (alpha / r[ss]) ^ (alpha / (1 - alpha));
+		Y[ss] = (1 - alpha * delta * mc[ss] * P_star[ss] / r[ss]) ^ (-sigma_C / (sigma_H + sigma_C))
+			* (w[ss] ^ (1 + sigma_H) / (chi_H * ((1  - alpha) * P_star[ss] * mc[ss]) ^ sigma_H)) ^ (1 / (sigma_H + sigma_C));
+		Y_f[ss] = Y[ss] * P_star[ss];
+		K[ss] = alpha * mc[ss] * Y_f[ss] / r[ss];
+		H[ss] = (1 - alpha) * mc[ss] * Y_f[ss] / w[ss];
+		I[ss] = delta * K[ss];
+		C[ss] = Y[ss] - I[ss];
+		
+		lambda[ss] = C[ss] ^ (-sigma_C);
+		q[ss] = lambda[ss];
+		
+		RHS[ss] = 1 / (1 - beta * theta * pi_star ^ epsilon) * Y[ss] * mc[ss];
+		LHS[ss] = epsilon / (epsilon - 1) * RHS[ss] / P_tilde[ss];
+		
+		TC[ss] = -(r[ss] * K[ss] + w[ss] * H[ss]);
+		Div[ss] = Y[ss] + TC[ss];
+		U[ss] = 1 / (1 - beta) * (C[ss] ^ (1 - sigma_C) / (1 - sigma_C) - 
+			chi_H * H[ss] ^ (1 + sigma_H) / (1 + sigma_H));
+	};
+};
 
 block HOUSEHOLD
 {
@@ -5,11 +42,13 @@ block HOUSEHOLD
 	{
 		u[] = C[] ^ (1 - sigma_C) / (1 - sigma_C) - 
 			chi_H * H[] ^ (1 + sigma_H) / (1 + sigma_H);
+			
+		S[] = (1 - phi_I / 2 * (I[] / I[-1] - 1)^2);
 	};
 	
 	objective
 	{
-		U[] = u[] + beta * E[][U[1]];
+		U[] = u[] + beta * zeta[] * E[][U[1]];
 	};
 	
 	controls
@@ -19,9 +58,13 @@ block HOUSEHOLD
 	
 	constraints
 	{
-		C[] + I[] + B[] / r_G[] = r[] * K[-1] + w[] * H[] + B[] + Div[] : lambda[];
-		K[] = (1 - delta) * K[-1] + (1 - phi_I / 2 * (I[] / I[-1] - 1)^2) * I[] : q[];
-		
+		C[] + I[] + B[] / r_G[] = r[] * K[-1] + w[] * H[] + B[-1] / pi[] + Div[] : lambda[];
+		K[] = (1 - delta) * K[-1] + S[] * I[] : q[];
+	};
+	
+	identities
+	{
+		B[] = 0;
 	};
 	
 	calibration
@@ -49,12 +92,12 @@ block INTERMEDIATE_FIRM
 	
 	constraints
 	{
-		Y[] = A[] * K[-1] ^ (alpha) * H[] ^ (1 - alpha): mc[];
+		Y_f[] = A[] * K[-1] ^ (alpha) * H[] ^ (1 - alpha): mc[];
 	};
 	
 	identities
 	{
-		Div[] = Y[] * P_star[] + TC[];
+		Div[] = Y[] + TC[];
 	};
 	
 	calibration
@@ -68,9 +111,9 @@ block FIRM_PRICE_SETTING
 {
 	identities
 	{
-		P_tilde[] * S1[] = epsilon / (epsilon - 1) * s2[];
-		S1[] = Y[] + beta * theta * E[][lambda[1] / lambda[] * pi[1] ^ (epsilon - 1) *s1[1]];
-		S2[] = Y[] * mc[] + beta * theta * E[][lambda[1] / lambda[] * pi[1] ^ epsilon * s2[1]];
+		P_tilde[] * LHS[] = epsilon / (epsilon - 1) * RHS[];
+		LHS[] = Y[] + beta * theta * E[][lambda[1] / lambda[] * pi[1] ^ (epsilon - 1) * LHS[1]];
+		RHS[] = Y[] * mc[] + beta * theta * E[][lambda[1] / lambda[] * pi[1] ^ epsilon * RHS[1]];
 	};
 	
 	calibration
@@ -80,11 +123,19 @@ block FIRM_PRICE_SETTING
 	};
 };
 
+block PRICE_EVOLUTION
+{
+	identities
+	{
+		1 = theta * pi[] ^ (epsilon - 1) + (1 - theta) * P_tilde[] ^ (1 - epsilon);
+	};
+};
+
 block PRICE_EFFICENCY_DISTORTION
 {
 	identities
 	{
-		P_star[] * Y[] = A[] * K[-1] ^ alpha * H[] ^ (1 - alpha);
+		P_star[] * Y[] = Y_f[];
 		P_star[] = (1 - theta) * P_tilde[] ^ (-epsilon) + theta * pi[] ^ epsilon * P_star[-1];
 	};
 };
@@ -93,12 +144,12 @@ block MONETARY_POLICY
 {
 	identities
 	{
-		r_G[] / r_G[ss] = (pi[] / pi_star) ^ phi_pi * (Y[] / Y[ss]) * exp(nu);
+		r_G[] / r_G[ss] = (pi[] / pi_star) ^ phi_pi * (Y[] / Y[ss]) * exp(nu[]);
 	};
 	
 	calibration
 	{
-		pi_star = 1 + 0.02 / 4;
+		pi_star = 1.005;
 		phi_pi  = 1.5;
 		phi_Y	= 0.5;
 	};
